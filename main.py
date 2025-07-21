@@ -3,7 +3,12 @@ from playwright.sync_api import sync_playwright
 import requests
 from twilio.rest import Client
 from dotenv import load_dotenv
+import subprocess
 import os
+
+# Automatically install Chromium if not already installed
+if not os.path.exists("/root/.cache/ms-playwright"):
+    subprocess.run(["playwright", "install", "chromium"])
 
 # ✅ Twilio credentials
 load_dotenv()  # Load from .env
