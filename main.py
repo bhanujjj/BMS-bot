@@ -1,22 +1,20 @@
 import time
-from playwright.sync_api import sync_playwright
 import requests
+from bs4 import BeautifulSoup
 from twilio.rest import Client
 from dotenv import load_dotenv
-import subprocess
 import os
 
-# Automatically install Chromium if not already installed
-if not os.path.exists("/root/.cache/ms-playwright"):
-    subprocess.run(["playwright", "install", "chromium"])
-
-# ✅ Twilio credentials
-load_dotenv()  # Load from .env
+# ✅ Load credentials from .env
+load_dotenv()
 
 TWILIO_SID = os.getenv("TWILIO_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 FROM_WHATSAPP_NUMBER = os.getenv("FROM_WHATSAPP_NUMBER")
-TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER")    # Your number
+TO_WHATSAPP_NUMBER = os.getenv("TO_WHATSAPP_NUMBER")
+
+MOVIE_URL = "https://in.bookmyshow.com/mumbai/movies/f1-the-movie/ET00403839"
+BOOKING_URL = "https://in.bookmyshow.com/movies/mumbai/f1-the-movie/ET00403839"
 
 def send_whatsapp_alert():
     print("✅ Sending WhatsApp alert...")
@@ -27,7 +25,7 @@ def send_whatsapp_alert():
         "Body": (
             "🎬 F1 Tickets Alert!\n\n"
             "✅ PVR: Infiniti, Malad (4DX) is now available!\n"
-            "🎟️ Book Now: https://in.bookmyshow.com/movies/mumbai/f1-the-movie/ET00403839"
+            f"🎟️ Book Now: {BOOKING_URL}"
         )
     }
     response = requests.post(url, data=payload, auth=(TWILIO_SID, TWILIO_AUTH_TOKEN))
@@ -36,39 +34,26 @@ def send_whatsapp_alert():
         print("⚠️ Failed to send WhatsApp message:", response.text)
 
 def check_show():
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        try:
-            print("🌐 Visiting movie page...")
-            page.goto("https://in.bookmyshow.com/movies/mumbai/f1-the-movie/ET00403839", timeout=60000)
+    print("🌐 Checking BMS movie page...")
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
-            print("🎟️ Clicking 'Book Tickets'...")
-            page.click("text=Book Tickets", timeout=10000)
-            page.wait_for_timeout(3000)
+    response = requests.get(MOVIE_URL, headers=headers)
+    if response.status_code != 200:
+        print(f"❌ Failed to fetch page, status: {response.status_code}")
+        return False
 
-            print("📅 Clicking '24 JUL'...")
-            try:
-                page.click("text=24 JUL", timeout=5000)
-            except:
-                print("❌ 24 July not available yet.")
-                return False
+    soup = BeautifulSoup(response.text, "html.parser")
+    page_text = soup.get_text()
 
-            print("🔍 Scanning show listings...")
-            content = page.content()
-
-            if "PVR: Infiniti, Malad" in content and "4DX" in content:
-                print("✅ Show FOUND!")
-                return True
-            else:
-                print("🔁 Show not live yet.")
-                return False
-
-        except Exception as e:
-            print("❌ Error during check:", str(e))
-            return False
-        finally:
-            browser.close()
+    # 🔍 Check for date and theater format
+    if "24 Jul" in page_text and "PVR: Infiniti, Malad" in page_text and "4DX" in page_text:
+        print("✅ Show FOUND!")
+        return True
+    else:
+        print("🔁 Show not live yet.")
+        return False
 
 # 🔁 Main loop
 if __name__ == "__main__":
@@ -77,4 +62,4 @@ if __name__ == "__main__":
         if check_show():
             send_whatsapp_alert()
             break
-        time.sleep(300)  # 5 minutes
+        time.sleep(300)  # Retry every 5 minutes
