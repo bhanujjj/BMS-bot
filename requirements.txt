@@ -1,0 +1,4 @@
+playwright
+twilio
+requests
+python-dotenv
