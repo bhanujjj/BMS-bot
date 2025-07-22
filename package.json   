@@ -1,0 +1,24 @@
+{
+  "name": "bookmyshow-alert-bot",
+  "version": "1.0.0",
+  "description": "A BookMyShow ticket alert bot for F1 4DX showtimes with WhatsApp notifications using Twilio.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "bookmyshow",
+    "twilio",
+    "ticket-alert",
+    "whatsapp",
+    "playwright",
+    "automation"
+  ],
+  "author": "Bhanuj Bhalla",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "playwright": "^1.43.1",
+    "twilio": "^4.19.0"
+  }
+}
